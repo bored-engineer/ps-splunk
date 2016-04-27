@@ -1,2 +1,2 @@
-# ps-splunk (Info)
+# ps-splunk (Tests)
 TODO: Explain

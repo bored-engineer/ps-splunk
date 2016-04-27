@@ -45,21 +45,42 @@ var splunkEncoder *json.Encoder
 
 // Test's structures
 type Test struct {
-	LastUpdated int         `json: "last_updated"`
-	Destination string      `json: "destination"`
-	DestinationIp string    `json: "destination_ip"`
-	DestinationHost string  `json: "destination_host"`
-	Source string           `json: "source"`
-	SourceIp string         `json: "source_ip"`
-	SourceHost string       `json: "source_host"`
+	LastUpdated int                 `json: "last_updated"`
+	Destination string              `json: "destination"`
+	DestinationIp string            `json: "destination_ip"`
+	DestinationHost string          `json: "destination_host"`
+	Source string                   `json: "source"`
+	SourceIp string                 `json: "source_ip"`
+	SourceHost string               `json: "source_host"`
+}
+
+// TestResults's structures
+type TestResult struct {
+	ThroughputDstMin int64          `json: "throughput_dst_min"`
+	ThroughputDstMax int64          `json: "throughput_dst_max"`
+	ThroughputSrcMin int64          `json: "throughput_src_min"`
+	ThroughputSrcMax int64          `json: "throughput_src_max"`
+	ThroughputProtocol string       `json: "throughput_protocol"`
+	ThroughputWeekMax int64         `json: "throughput_week_max"`
+	ThroughputWeekMin int64         `json: "throughput_week_min"`
+	ThroughputSrcAverage int64      `json: "throughput_src_average"`
+	ThroughputDstAverage int64      `json: "throughput_dst_average"`
+	SourceHost string               `json: "source_host"`
+	SourceIp string                 `json: "source_ip"`
+	DestinationHost string          `json: "destination_host"`
+	DestinationIp string            `json: "destination_ip"`
+	ThroughputBidirectional int64   `json: "throughput_bidirectional"`
+	ThroughputLastUpdate int64      `json: "throughput_last_update"`
+	ThroughputDuration int64        `json: "throughput_duration"`
 }
 
 // The output structure
 type SplunkOutput struct {
-	Target string           `json: "target"`
-	Via string              `json: "via"`
-	Tests []Test            `json: "tests"`
-	Time string             `json: "time"`
+	Target string                   `json: "target"`
+	Via string                      `json: "via"`
+	Tests []Test                    `json: "tests"`
+	TestResults []TestResult        `json: "testResults"`
+	Time string                     `json: "time"`
 }
 
 // Gets all IPs associated with a string
@@ -211,7 +232,7 @@ func getTests(via string, target string) bool {
 	for _, test := range tests {
 		// Queue jobs for each known value
 		infoLogger.Printf(
-			"Queueing test hosts (%s %s %s %s %s %s) from host: %s\n",
+			"Queueing test hosts (%s %s %s %s %s %s) from host (%s) via: %s\n",
 			test.Destination,
 			test.DestinationIp,
 			test.DestinationHost,
@@ -219,6 +240,7 @@ func getTests(via string, target string) bool {
 			test.SourceIp,
 			test.SourceHost,
 			target,
+			via,
 		)
 		queueJob(test.Source, target)
 		queueJob(test.SourceIp, target)
@@ -227,11 +249,48 @@ func getTests(via string, target string) bool {
 		queueJob(test.DestinationIp, target)
 		queueJob(test.DestinationHost, target)
 	}
+	resp, err = client.Get("http://" + via + "/perfsonar-graphs/graphData.cgi?action=tests&url=http%3A%2F%2F" + target + "%2Fesmond%2Fperfsonar%2Farchive%2F")
+	if err != nil {
+		errorLogger.Println(err)
+		return false
+	}
+	// If it wasn't a json response skip this host
+	if !strings.Contains(resp.Header.Get("Content-Type"), "text/json") {
+		errorLogger.Println("Not JSON")
+		return false
+	}
+	defer resp.Body.Close()
+	// Make a object for the tests to be stored in
+	testResults := []TestResult{}
+	// Parse the body
+	err = json.NewDecoder(resp.Body).Decode(&testResults)
+	if err != nil {
+		errorLogger.Println(err)
+		return false
+	}
+	// Loop each test
+	for _, testResult := range testResults {
+		// Queue jobs for each known value
+		infoLogger.Printf(
+			"Queueing test hosts (%s %s %s %s) from host (%s) via: %s\n",
+			testResult.DestinationIp,
+			testResult.DestinationHost,
+			testResult.SourceIp,
+			testResult.SourceHost,
+			target,
+			via,
+		)
+		queueJob(testResult.SourceIp, target)
+		queueJob(testResult.SourceHost, target)
+		queueJob(testResult.DestinationIp, target)
+		queueJob(testResult.DestinationHost, target)
+	}
 	// Write it to the output file
 	splunkEncoder.Encode(SplunkOutput{
 		Target: target,
 		Via: via,
 		Tests: tests,
+		TestResults: testResults,
 		Time: time.Now().Format(time.UnixDate),
 	})
 	// Return success

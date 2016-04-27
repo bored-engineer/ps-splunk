@@ -45,42 +45,42 @@ var splunkEncoder *json.Encoder
 
 // Test's structures
 type Test struct {
-	LastUpdated int                 `json: "last_updated"`
-	Destination string              `json: "destination"`
-	DestinationIp string            `json: "destination_ip"`
-	DestinationHost string          `json: "destination_host"`
-	Source string                   `json: "source"`
-	SourceIp string                 `json: "source_ip"`
-	SourceHost string               `json: "source_host"`
+	LastUpdated int                 `json:"last_updated"`
+	Destination string              `json:"destination"`
+	DestinationIp string            `json:"destination_ip"`
+	DestinationHost string          `json:"destination_host"`
+	Source string                   `json:"source"`
+	SourceIp string                 `json:"source_ip"`
+	SourceHost string               `json:"source_host"`
 }
 
 // TestResults's structures
 type TestResult struct {
-	ThroughputDstMin int64          `json: "throughput_dst_min"`
-	ThroughputDstMax int64          `json: "throughput_dst_max"`
-	ThroughputSrcMin int64          `json: "throughput_src_min"`
-	ThroughputSrcMax int64          `json: "throughput_src_max"`
-	ThroughputProtocol string       `json: "throughput_protocol"`
-	ThroughputWeekMax int64         `json: "throughput_week_max"`
-	ThroughputWeekMin int64         `json: "throughput_week_min"`
-	ThroughputSrcAverage int64      `json: "throughput_src_average"`
-	ThroughputDstAverage int64      `json: "throughput_dst_average"`
-	SourceHost string               `json: "source_host"`
-	SourceIp string                 `json: "source_ip"`
-	DestinationHost string          `json: "destination_host"`
-	DestinationIp string            `json: "destination_ip"`
-	ThroughputBidirectional int64   `json: "throughput_bidirectional"`
-	ThroughputLastUpdate int64      `json: "throughput_last_update"`
-	ThroughputDuration int64        `json: "throughput_duration"`
+	ThroughputDstMin int64          `json:"throughput_dst_min"`
+	ThroughputDstMax int64          `json:"throughput_dst_max"`
+	ThroughputSrcMin int64          `json:"throughput_src_min"`
+	ThroughputSrcMax int64          `json:"throughput_src_max"`
+	ThroughputProtocol string       `json:"throughput_protocol"`
+	ThroughputWeekMax int64         `json:"throughput_week_max"`
+	ThroughputWeekMin int64         `json:"throughput_week_min"`
+	ThroughputSrcAverage int64      `json:"throughput_src_average"`
+	ThroughputDstAverage int64      `json:"throughput_dst_average"`
+	SourceHost string               `json:"source_host"`
+	SourceIp string                 `json:"source_ip"`
+	DestinationHost string          `json:"destination_host"`
+	DestinationIp string            `json:"destination_ip"`
+	ThroughputBidirectional int64   `json:"throughput_bidirectional"`
+	ThroughputLastUpdate int64      `json:"throughput_last_update"`
+	ThroughputDuration int64        `json:"throughput_duration"`
 }
 
 // The output structure
 type SplunkOutput struct {
-	Target string                   `json: "target"`
-	Via string                      `json: "via"`
-	Tests []Test                    `json: "tests"`
-	TestResults []TestResult        `json: "testResults"`
-	Time string                     `json: "time"`
+	Target string                   `json:"target"`
+	Via string                      `json:"via"`
+	Tests []Test                    `json:"tests"`
+	TestResults []TestResult        `json:"testResults"`
+	Time string                     `json:"time"`
 }
 
 // Gets all IPs associated with a string
@@ -209,21 +209,21 @@ func readCache() {
 func getTests(via string, target string) bool {
 	// Let's get the hosts it tests against
 	infoLogger.Printf("Getting tests for (%s) via: %s\n", target, via)
-	resp, err := client.Get("http://" + via + "/perfsonar-graphs/graphData.cgi?action=test_list&url=http%3A%2F%2F" + target + "%2Fesmond%2Fperfsonar%2Farchive%2F")
+	testsResp, err := client.Get("http://" + via + "/perfsonar-graphs/graphData.cgi?action=test_list&url=http%3A%2F%2F" + target + "%2Fesmond%2Fperfsonar%2Farchive%2F")
 	if err != nil {
 		errorLogger.Println(err)
 		return false
 	}
 	// If it wasn't a json response skip this host
-	if !strings.Contains(resp.Header.Get("Content-Type"), "text/json") {
+	if !strings.Contains(testsResp.Header.Get("Content-Type"), "text/json") {
 		errorLogger.Println("Not JSON")
 		return false
 	}
-	defer resp.Body.Close()
+	defer testsResp.Body.Close()
 	// Make a object for the tests to be stored in
 	tests := []Test{}
 	// Parse the body
-	err = json.NewDecoder(resp.Body).Decode(&tests)
+	err = json.NewDecoder(testsResp.Body).Decode(&tests)
 	if err != nil {
 		errorLogger.Println(err)
 		return false
@@ -249,21 +249,21 @@ func getTests(via string, target string) bool {
 		queueJob(test.DestinationIp, target)
 		queueJob(test.DestinationHost, target)
 	}
-	resp, err = client.Get("http://" + via + "/perfsonar-graphs/graphData.cgi?action=tests&url=http%3A%2F%2F" + target + "%2Fesmond%2Fperfsonar%2Farchive%2F")
+	testResultsResp, err := client.Get("http://" + via + "/perfsonar-graphs/graphData.cgi?action=tests&url=http%3A%2F%2F" + target + "%2Fesmond%2Fperfsonar%2Farchive%2F")
 	if err != nil {
 		errorLogger.Println(err)
 		return false
 	}
 	// If it wasn't a json response skip this host
-	if !strings.Contains(resp.Header.Get("Content-Type"), "text/json") {
+	if !strings.Contains(testResultsResp.Header.Get("Content-Type"), "text/json") {
 		errorLogger.Println("Not JSON")
 		return false
 	}
-	defer resp.Body.Close()
+	defer testResultsResp.Body.Close()
 	// Make a object for the tests to be stored in
 	testResults := []TestResult{}
 	// Parse the body
-	err = json.NewDecoder(resp.Body).Decode(&testResults)
+	err = json.NewDecoder(testResultsResp.Body).Decode(&testResults)
 	if err != nil {
 		errorLogger.Println(err)
 		return false
@@ -272,7 +272,7 @@ func getTests(via string, target string) bool {
 	for _, testResult := range testResults {
 		// Queue jobs for each known value
 		infoLogger.Printf(
-			"Queueing test hosts (%s %s %s %s) from host (%s) via: %s\n",
+			"Queueing test result hosts (%s %s %s %s) from host (%s) via: %s\n",
 			testResult.DestinationIp,
 			testResult.DestinationHost,
 			testResult.SourceIp,

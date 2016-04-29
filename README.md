@@ -1,2 +1,2 @@
-# ps-splunk (Tests)
-TODO: Explain
+# ps-splunk
+Splunk perfSONAR tools

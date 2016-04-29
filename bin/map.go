@@ -51,7 +51,7 @@ func queue(host string, origin string) {
 		host = "[" + host + "]"
 	}
 	// Shitty speed optimization
-	links <- []byte("{\"host\":\"" + host + "\",\"origin\":\"" + origin + "\"}\n")
+	links <- []byte("{\"address\":\"" + host + "\",\"origin\":\"" + origin + "\"}\n")
 	cache.RLock()
 	_, ok := cache.m[host]
 	cache.RUnlock()

@@ -213,6 +213,7 @@ func getIP(host string, origin string) {
 
 // Process the cache
 func processCache(records [][]string, origin string) {
+	defer wg.Done()
 	// Loop each record
 	for _, record := range records {
 		// Parse the url
@@ -230,7 +231,7 @@ func processCache(records [][]string, origin string) {
 				continue
 			}
 			// Resolve to an IP and queue
-			go getIP(shost, origin)
+			getIP(shost, origin)
 		}
 	}
 }
@@ -279,6 +280,7 @@ func getCache(cache string) {
 					continue
 				}
 				infoLogger.Printf("Processing cache file: %s\n", header.Name)
+				wg.Add(1)
 				go processCache(records, "cache:" + header.Name + ":" + cache)
 			case tar.TypeDir:
 				continue

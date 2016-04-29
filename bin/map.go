@@ -211,6 +211,30 @@ func getIP(host string, origin string) {
 	}
 }
 
+// Process the cache
+func processCache(records [][]string, origin string) {
+	// Loop each record
+	for _, record := range records {
+		// Parse the url
+		url, err := url.Parse(record[0])
+		if err != nil {
+			errorLogger.Println(err)
+			continue
+		}
+		// If there was a host/port
+		if url.Host != "" {
+			// Extract just the host
+			shost, _, err := net.SplitHostPort(url.Host)
+			if err != nil {
+				errorLogger.Println(err)
+				continue
+			}
+			// Resolve to an IP and queue
+			go getIP(shost, origin)
+		}
+	}
+}
+
 // Reads a given cache file
 func getCache(cache string) {
 	defer wg.Done()
@@ -254,27 +278,8 @@ func getCache(cache string) {
 					errorLogger.Println(err)
 					continue
 				}
-				infoLogger.Printf("Reading cache file: %s\n", header.Name)
-				// Loop each record
-				for _, record := range records {
-					// Parse the url
-					url, err := url.Parse(record[0])
-					if err != nil {
-						errorLogger.Println(err)
-						continue
-					}
-					// If there was a host/port
-					if url.Host != "" {
-						// Extract just the host
-						shost, _, err := net.SplitHostPort(url.Host)
-						if err != nil {
-							errorLogger.Println(err)
-							continue
-						}
-						// Resolve to an IP and queue
-						getIP(shost, "cache:" + header.Name + ":" + cache)
-					}
-				}
+				infoLogger.Printf("Processing cache file: %s\n", header.Name)
+				go processCache(records, "cache:" + header.Name + ":" + cache)
 			case tar.TypeDir:
 				continue
 			default:

@@ -281,7 +281,7 @@ func getCache(cache string) {
 				}
 				infoLogger.Printf("Processing cache file: %s\n", header.Name)
 				wg.Add(1)
-				go processCache(records, "cache:" + header.Name + ":" + cache)
+				go processCache(records, "cache," + header.Name + "," + cache)
 			case tar.TypeDir:
 				continue
 			default:

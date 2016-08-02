@@ -35,7 +35,7 @@ var cache = struct{
     m map[string]bool
 }{m: make(map[string]bool)}
 
-// Hold information on how a host is linked with origin at timestamp
+// Link holds information on how a host is linked with origin at timestamp
 type Link struct {
 	Host string 		`json:"host"`
 	Origin string 		`json:"origin"`
@@ -68,11 +68,11 @@ func queue(host string, origin string) {
 // The Summary output queue
 var summaries = make(chan []byte, 10000000)
 
-// Test's structures
+// Test defines structures for tests
 type Test struct {
 	LastUpdated int        `json:"last_updated"`
-	DestinationIp string   `json:"destination_ip"`
-	SourceIp string        `json:"source_ip"`
+	DestinationIP string   `json:"destination_ip"`
+	SourceIP string        `json:"source_ip"`
 }
 
 // The test results output queue
@@ -132,8 +132,8 @@ func worker(id int, host string) {
 	// For each test
 	for _, test := range tests {
 		// Queue both the src and dst
-		queue(test.DestinationIp, host)
-		queue(test.SourceIp, host)
+		queue(test.DestinationIP, host)
+		queue(test.SourceIP, host)
 	}
 	// Get the test results
 	infoLogger.Printf("Worker (%d): Getting test results for: %s\n", id, host)
